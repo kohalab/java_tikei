@@ -8,11 +8,13 @@ public class java_tikei extends Canvas {
     static int width = 640;
     static int height = 480;
 
-    static int frameRate;
+    static double frameRate;
 
     static Noise noise;
 
     static int frameCount;
+
+    static long fcoldnano,mf;
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("java canvas");
@@ -24,38 +26,77 @@ public class java_tikei extends Canvas {
         long oldnano = System.nanoTime();
         long framenano = (1000*1000*1000)/60;
         long osoldnano = System.nanoTime();
-        int fcc = 0;
         noise = new Noise();
+        setup();
         while(true){
           //
           if(System.nanoTime()-oldnano >= framenano){
+            osoldnano =  System.nanoTime()-osoldnano;
+            frameRate = 1d/(osoldnano/1000d/1000d/1000d);
+            double syori = (mf/1000d/1000d);
+            System.out.println("frameRate:"+ String.format("%.3f", frameRate) );
+            System.out.println("処理時間  :"+	String.format("%.3f", syori)+"ms");
             canvas.repaint();
             oldnano = System.nanoTime();
-            fcc++;
-          }
-          //
-          if(System.nanoTime()-osoldnano >= 1000*1000*1000){
             osoldnano = System.nanoTime();
-            frameRate = fcc;
-            System.out.println("frameRate "+frameRate);
-            fcc = 0;
           }
           //
         }
     }
 
+    int[][] map = new int[80][60];
+
+    public static void setup(){
+
+    }
+
     public void paint(Graphics g) {
-      g.setColor(Color.black);
+      fcoldnano = System.nanoTime();
+      //
+      for(int y = 0;y < map[0].length;y++){
+          for(int x = 0;x < map.length;x++){
+            map[x][y] = 0;
+            //
+
+            int X = x+(frameCount/2);
+            int Y = y;
+
+            if(noise.pnoise(X/60d,Y/30d,0) < (((double)y/map[0].length)/1.5)+0.1 ){
+              map[x][y] = 1;
+            }
+            //
+        }
+      }
+      for(int y = map[0].length-1;y > 0;y--){
+          for(int x = 0;x < map.length;x++){
+            if(map[x][y] == 1){
+              if(map[x][y-1] == 1){
+                map[x][y] = 2;
+              }
+            }
+        }
+      }
+      //
+      g.setColor(new Color(0xbb,0xee,0xff));
       g.fillRect(0, 0, width, height);
-      for(int i = 0;i < width;i++){
-        int A = i;
-        int h = 0;
-        h += (int)(noise.pnoise(A/100d,frameCount/100d,0)*height);
-        g.setColor(Color.white);
-        g.fillRect(i, height-h, 1, h);
+
+      for(int y = 0;y < map[0].length;y++){
+          for(int x = 0;x < map.length;x++){
+            //
+            if(map[x][y] == 1){
+              g.setColor(new Color(0x66,0xee,0x33));
+              g.fillRect(x*8,y*8,8,8);
+            }
+            if(map[x][y] == 2){
+              g.setColor(new Color(0x77,0x44,0x00));
+              g.fillRect(x*8,y*8,8,8);
+            }
+            //
+          }
       }
 
       frameCount = frameCount + 1;
+      mf = System.nanoTime()-fcoldnano;
     }
 
 }
@@ -108,15 +149,15 @@ class Noise {
     //
   }
   public double pnoise(double x,double y,double z){
-    x += 100000;
-    y += 100000;
-    z += 100000;
+    x += 15;
+    y += 15;
+    z += 15;
     double all = 0;
     double wari = 0;
-    for(int i = 0;i < 5;i++){
+    for(int i = 0;i < 3;i++){
       int s = i+1;
-      all += ((noise(x*s,y*s,z*s)-0.5)*2)/s;
-      wari += 1;
+      all += ((noise(x*s,y*s,z*s)-0.5)*2)/s*(s/2);
+      wari += (double)1/s;
     }
     all /= wari;
     all += 0.5;
