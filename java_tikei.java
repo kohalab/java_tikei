@@ -97,6 +97,9 @@ public class java_tikei extends Canvas implements KeyListener {
       }catch(Exception e){
         e.printStackTrace();
       }
+      if(a == null){
+        System.out.println(path+" is notfound");
+      }
       return a;
     }
 
@@ -139,6 +142,9 @@ public class java_tikei extends Canvas implements KeyListener {
       data[0] = loadBufferedImage("tex/air.png");
       data[1] = loadBufferedImage("tex/kusa.png");
       data[2] = loadBufferedImage("tex/tuti.png");
+      data[3] = loadBufferedImage("tex/isi.png");
+      data[4] = loadBufferedImage("tex/woodf.png");
+      data[5] = loadBufferedImage("tex/ha.png");
 
       font_w0 = loadFont("font/mplus-1p-thin.ttf");
       font_w1 = loadFont("font/mplus-1p-light.ttf");
@@ -166,19 +172,26 @@ public class java_tikei extends Canvas implements KeyListener {
 
             if(noise.pnoise(X/60d,Y/30d,0) < k ){
               map[x][y] = 1;
+              if(noise.pnoise(X/60d,Y/60d,135) < (k*2)-0.6 ){
+                map[x][y] = 3;
+              }
             }
             //
         }
         double p = (double)y/(map[0].length-1) *100d;
         System.out.println("生成中 "+String.format("%3.0f", p));
       }
-      for(int y = map[0].length-1;y > 0;y--){
+      for(int y = map[0].length-1;y >= 0;y--){
           for(int x = 0;x < map.length;x++){
-            if(map[x][y] == 1){
-              if(map[x][y-1] == 1){
-                map[x][y] = 2;
+            //
+            if(y > 0){
+              if(map[x][y] == 1){
+                if(map[x][y-1] != 0){
+                  map[x][y] = 2;
+                }
               }
             }
+            //
         }
       }
 
@@ -284,6 +297,8 @@ public class java_tikei extends Canvas implements KeyListener {
 }
 
 class Noise {
+  public static long seed = 2398;
+
   public long rand(long x) {
     x *= 135246;
 
@@ -321,7 +336,7 @@ class Noise {
     return x;
   }
   public long rand(long x,long y,long z) {
-    return rand(rand(rand(x)+y)+z);
+    return rand(rand(rand(rand(x+seed))+y)+z);
   }
   public double frand(long x){
     return (rand(x)&0xffff)/65535;
@@ -365,7 +380,7 @@ class Noise {
     double wari = 0;
     for(int i = 0;i < 8;i++){
       int s = i+1;
-      all += ((noise(x*s,y*s,z*s)-0.5)*2)/(s*10);
+      all += ((noise(x*s,y*s,z*s)-0.5)*2)/(s*7);
       wari += (double)1/s;
     }
     all /= wari;
