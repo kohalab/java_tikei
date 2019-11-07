@@ -15,6 +15,7 @@ import java.awt.image.*;
 import java.awt.geom.AffineTransform;
 import java.awt.Font;
 
+
 public class java_tikei extends Canvas implements KeyListener {
 
     static int w = 40;
@@ -120,43 +121,12 @@ public class java_tikei extends Canvas implements KeyListener {
       return font;
     }
 
-    static boolean col(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2) {
-      return (x2 < (x1+w1)) && (x1 < (x2+w2)) && (y2 < (y1+h1)) && (y1 < (y2+h2));
-    }
-
-    static boolean col(int x1, int y1, int w1, int h1, int x2, int y2) {
-      return (x1 <= x2 && x1+w1 > x2) && (y1 <= y2 && y1+h1 > y2);
-    }
-
-    static BufferedImage yh(BufferedImage in,boolean f)
-    {
-        if(f){
-          AffineTransform at = new AffineTransform();
-          at.concatenate(AffineTransform.getScaleInstance(-1, 1));
-          at.concatenate(AffineTransform.getTranslateInstance(-in.getWidth(), 0));
-          return hn(in, at);
-        }else{
-          return in;
-        }
-    }
-
-    static BufferedImage hn(BufferedImage in, AffineTransform at)
-    {
-        BufferedImage n = new BufferedImage(
-            in.getWidth(), in.getHeight(),
-            BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = n.createGraphics();
-        g.transform(at);
-        g.drawImage(in, 0, 0, null);
-        g.dispose();
-        return n;
-    }
-
     static BufferedImage[] data = new BufferedImage[256];
     static BufferedImage[] item = new BufferedImage[256];
-    static BufferedImage[] player = new BufferedImage[5];
+    static BufferedImage[] plei = new BufferedImage[5];
 
     static BufferedImage cs;
+    static BufferedImage kikai;
 
     static Color bgcolor;
 
@@ -175,12 +145,10 @@ public class java_tikei extends Canvas implements KeyListener {
     static Font font_w5;
     static Font font_w6;
 
-    static double px,py,pxs,pys;
-    static int cx,cy,csx,csy;
-    static int plr;
-
     static int[][] map_old = new int[w*16][h*8];
     static int[][] map = new int[w*16][h*8];
+
+    static ent player;
 
     public static void setup(){
       bgcolor = new Color(224, 240, 255);
@@ -194,17 +162,19 @@ public class java_tikei extends Canvas implements KeyListener {
       data[3] = loadBufferedImage("tex/isi.png");
       data[4] = loadBufferedImage("tex/woodf.png");
       data[5] = loadBufferedImage("tex/ha.png");
+      data[128] = loadBufferedImage("tex/sirusi.png");
 
 
       item[0] = loadBufferedImage("tex/item_turu.png");
 
-      player[0] = loadBufferedImage("tex/p0.png");
-      player[1] = loadBufferedImage("tex/p1.png");
-      player[2] = loadBufferedImage("tex/p2.png");
-      player[3] = loadBufferedImage("tex/p3.png");
-      player[4] = loadBufferedImage("tex/p4.png");
+      plei[0] = loadBufferedImage("tex/p0.png");
+      plei[1] = loadBufferedImage("tex/p1.png");
+      plei[2] = loadBufferedImage("tex/p2.png");
+      plei[3] = loadBufferedImage("tex/p3.png");
+      plei[4] = loadBufferedImage("tex/p4.png");
 
       cs = loadBufferedImage("tex/cs.png");
+      kikai = loadBufferedImage("tex/kikai.png");
 
       font_w0 = loadFont("font/mplus-1p-thin.ttf");
       font_w1 = loadFont("font/mplus-1p-light.ttf");
@@ -213,6 +183,8 @@ public class java_tikei extends Canvas implements KeyListener {
       font_w4 = loadFont("font/mplus-1p-heavy.ttf");
       font_w5 = loadFont("font/mplus-1p-thin.ttf");
       font_w6 = loadFont("font/mplus-1p-black.ttf");
+
+      player = new ent();
 
       yscr = map[0].length/2;
 
@@ -244,7 +216,7 @@ public class java_tikei extends Canvas implements KeyListener {
       out:
       for(int y = 0;y < map[0].length;y++){
         if(map[0][y] != 0){
-          py = y*16;
+          player.py = y*16;
           break out;
         }
       }
@@ -280,10 +252,14 @@ public class java_tikei extends Canvas implements KeyListener {
           for(int x = 0;x < map.length;x++){
             //
             if(( map[x][y] != map_old[x][y] )){
-              BufferedImage n = data[ map[x][y] ];
-              if(n != null){
-                bgg.g.drawImage(n,x*16,y*16,null);
+              //
+              if(true){
+                BufferedImage n = data[ map[x][y] ];
+                if(n != null){
+                  bgg.g.drawImage(n,x*16,y*16,null);
+                }
               }
+              //
             }
             //
           }
@@ -294,97 +270,32 @@ public class java_tikei extends Canvas implements KeyListener {
       get(bgi,(int)(xscr),(int)(yscr),width,height)
       ,0,0,null);
 
-      int playern = 0;
+      g.drawImage(kikai,kpx-((int)xscr),kpy-((int)yscr),null);
 
-      g.drawImage(yh(player[playern],plr < 0),(int)(((px-xscr))-6),(int)(((py-yscr))-24),null);
-      g.drawImage(yh(item[0],plr < 0),(int)(((px-xscr))-6)+(11*plr)+(plr<0?4:0),(int)(((py-yscr))-24)+7,null);
+      player.proc(map);
+      player.draw(g,plei,item,cs,xscr,yscr);
 
-      g.drawImage(cs,(int)((cx*16)-xscr)+1,(int)((cy*16)-yscr),null);
-      // players
+      sagasi();
 
-      xscr = px-(width/2);
-      yscr = py-(height/2);
+      xscr = player.px-(width/2);
+      yscr = player.py-(height/2);
       if(xscr < 0)xscr = 0;
       if(yscr < 0)yscr = 0;
-
-      px += pxs;
-      py += pys;
-
-      if(csx < -2)csx = -2;
-      if(csx > +2)csx = +2;
-      if(csy < -2)csy = -2;
-      if(csy > +2)csy = +2;
-
-      cx = (int)(px/16)+csx;
-      cy = (int)(py/16)-1+csy;
-      if(cx < 0)cx = 0;
-      if(cy < 0)cy = 0;
-      if(cx > map.length-1)cx = map.length-1;
-      if(cy > map[0].length-1)cy = map[0].length-1;
-      if(keys[' ']){
-        map[cx][cy] = 0;
-      }
-
-      pys += 0.4;
-      boolean tnaswtktirk = false;
-      for(int y = 0;y < map[0].length;y++){
-          for(int x = 0;x < map.length;x++){
-            int X = x*16;
-            int Y = y*16;
-            int W = 16;
-            int H = 16;
-            if(map[x][y] != 0){
-              if( col(X,Y,W,H,(int)px,(int)py) ){
-                //pys = -0.1;
-                py = y*16;
-                tnaswtktirk = true;
-              }
-              if( col(X,Y,W,H,(int)px,(int)py-24) ){
-                pys = 1;
-                tnaswtktirk = true;
-              }
-              if( col(X,Y,W,H,(int)px-8,(int)py-12) ){
-                //pys = -0.1;
-                px = (x+1)*16+8;
-              }
-              if( col(X,Y,W,H,(int)px+8,(int)py-12) ){
-                //pys = -0.1;
-                px = x*16-8;
-              }
-            }
-          //
-        }
-      }
-
-      if(keys['a']){
-        plr = -1;
-        pxs -= 2;
-      }
-      if(keys['d']){
-        plr = +1;
-        pxs += 2;
-      }
-      if(tnaswtktirk){
-        if(keys['w']){
-          pys = -4;
-        }
-      }
-      if(pys > 4)pys = 4;
-      pxs /= 1.6;
       //
 
       frameCount = frameCount + 1;
       font_w3 = font_w3.deriveFont(12.0f);
       g.setFont(font_w3);
       g.setColor(new Color(0));
-
+      /*
       g.drawString("x:"+px , 5 , 12+(12*0));
       g.drawString("y:"+py , 5 , 12+(12*1));
       g.drawString("xscr"+xscr , 5 , 12+(12*2));
       g.drawString("yscr:"+yscr , 5 , 12+(12*3));
       g.drawString("px:"+(int)(((px-xscr))-8) , 5 , 12+(12*4));
       g.drawString("py:"+(int)(((py-yscr))-24) , 5 , 12+(12*5));
-/*
+      */
+      /*
       if(keyCodes[UP]){
         yscrs -= 0.1;
       }
@@ -397,12 +308,60 @@ public class java_tikei extends Canvas implements KeyListener {
       if(keyCodes[RIGHT]){
         xscrs += 0.1;
       }
-*/
+      */
     //xscrs /= 1.2;
     //yscrs /= 1.2;
     xscr += xscrs;
     yscr += yscrs;
     mf = System.nanoTime()-fcoldnano;
+  }
+
+  static int kpx,kpy;
+
+  int kyori(int x,int y){
+    return (x > 0?x:-x)+(y > 0?y:-y);
+  }
+
+  void sagasi(){
+    int bk = map.length*map[0].length;
+    int gx = map.length*16/2;
+    int gy = 0;
+    for(int y = 0;y < map[0].length;y++){
+        for(int x = 0;x < map.length;x++){
+          //
+          if(map[x][y] == 128){
+            //
+            int k = kyori(
+            ((int)kpx)-(x*16),
+            ((int)kpy)-(y*16)
+            );
+            if(bk > k){
+              gx = x*16;
+              gy = y*16;
+              bk = k;
+            }
+            //
+          }
+          //
+        }
+      }
+      //
+      if(gx < kpx)kpx -= 16;
+      else
+      if(gy < kpy)kpy -= 16;
+      else
+      if(gx > kpx)kpx += 16;
+      else
+      if(gy > kpy)kpy += 16;
+      //
+      if((kpx/16) < 0 )kpx = 0;
+      if((kpy/16) < 0 )kpy = 0;
+      if((kpx/16) > map.length-1 )kpx = (map.length-1)*16;
+      if((kpy/16) > map[0].length-1 )kpy = (map[0].length-1)*16;
+      if(gx == kpx && gy == kpy){
+        map[gx/16][gy/16] = 5;
+      }
+      //
   }
 
     //	getKeyChar()
@@ -420,10 +379,10 @@ public class java_tikei extends Canvas implements KeyListener {
       keyCode = event.getKeyCode();
       keys[key] = true;
       keyCodes[keyCode] = true;
-      if(keyCode == LEFT )csx--;
-      if(keyCode == RIGHT)csx++;
-      if(keyCode == UP   )csy--;
-      if(keyCode == DOWN )csy++;
+      if(keyCode == LEFT )player.csx--;
+      if(keyCode == RIGHT)player.csx++;
+      if(keyCode == UP   )player.csy--;
+      if(keyCode == DOWN )player.csy++;
     }
     public void keyReleased(KeyEvent event) {
       keyPressed = false;
@@ -547,4 +506,127 @@ class KGraphics{
     return buffer;
   }
 
+}
+
+class ent{
+
+  public boolean col(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2) {
+    return (x2 < (x1+w1)) && (x1 < (x2+w2)) && (y2 < (y1+h1)) && (y1 < (y2+h2));
+  }
+
+  public boolean col(int x1, int y1, int w1, int h1, int x2, int y2) {
+    return (x1 <= x2 && x1+w1 > x2) && (y1 <= y2 && y1+h1 > y2);
+  }
+
+  public BufferedImage yh(BufferedImage in,boolean f)
+  {
+      if(f){
+        AffineTransform at = new AffineTransform();
+        at.concatenate(AffineTransform.getScaleInstance(-1, 1));
+        at.concatenate(AffineTransform.getTranslateInstance(-in.getWidth(), 0));
+        return hn(in, at);
+      }else{
+        return in;
+      }
+  }
+
+  public BufferedImage hn(BufferedImage in, AffineTransform at)
+  {
+      BufferedImage n = new BufferedImage(
+          in.getWidth(), in.getHeight(),
+          BufferedImage.TYPE_INT_ARGB);
+      Graphics2D g = n.createGraphics();
+      g.transform(at);
+      g.drawImage(in, 0, 0, null);
+      g.dispose();
+      return n;
+  }
+
+  static double px,py,pxs,pys;
+  static int cx,cy,csx,csy;
+  static int plr;
+
+
+  public void proc(int[][] map){
+    int playern = 0;
+
+    px += pxs;
+    py += pys;
+
+    if(csx < -2)csx = -2;
+    if(csx > +2)csx = +2;
+    if(csy < -2)csy = -2;
+    if(csy > +2)csy = +2;
+
+    cx = (int)(px/16)+csx;
+    cy = (int)(py/16)-1+csy;
+    if(cx < 0)cx = 0;
+    if(cy < 0)cy = 0;
+    if(cx > map.length-1)cx = map.length-1;
+    if(cy > map[0].length-1)cy = map[0].length-1;
+    if(java_tikei.keys[' ']){
+      map[cx][cy] = 0;
+    }
+    if(java_tikei.keys['b']){
+      map[cx][cy] = 128;
+    }
+
+    pys += 0.4;
+    boolean tnaswtktirk = false;
+    for(int y = 0;y < map[0].length;y++){
+        for(int x = 0;x < map.length;x++){
+          int X = x*16;
+          int Y = y*16;
+          int W = 16;
+          int H = 16;
+          if(map[x][y] != 0 && map[x][y] < 128){
+            if( col(X,Y,W,H,(int)px,(int)py) ){
+              pys = 0;
+              py = y*16;
+              tnaswtktirk = true;
+            }
+            if( col(X,Y,W,H,(int)px,(int)py-20) || col(X,Y,W,H,(int)px,(int)py-14) ){
+              pys = 1;
+              py = (y*16)+24+8+4;
+            }else{
+              if( col(X,Y,W,H,(int)px-8,(int)py-8) || col(X,Y,W,H,(int)px-8,(int)py-18) ){
+                //pys = -0.1;
+                px = (x+1)*16+8;
+              }
+              if( col(X,Y,W,H,(int)px+8,(int)py-8) || col(X,Y,W,H,(int)px+8,(int)py-18) ){
+                //pys = -0.1;
+                px = x*16-8;
+              }
+            }
+            //
+          }
+        //
+      }
+    }
+
+    if(java_tikei.keys['a']){
+      plr = -1;
+      pxs -= 2;
+    }
+    if(java_tikei.keys['d']){
+      plr = +1;
+      pxs += 2;
+    }
+    if(tnaswtktirk){
+      if(java_tikei.keys['w']){
+        pys = -4;
+      }
+    }
+    if(pys > 4)pys = 4;
+    pxs /= 1.6;
+  }
+  public void draw(Graphics g,BufferedImage[] player,BufferedImage[] item,BufferedImage cs,double xscr,double yscr){
+    int playern = 0;
+
+    g.drawImage(yh(player[playern],plr < 0),(int)(((px-xscr))-6),(int)(((py-yscr))-24),null);
+    g.drawImage(yh(item[0],plr < 0),(int)(((px-xscr))-6)+(11*plr)+(plr<0?4:0),(int)(((py-yscr))-24)+7,null);
+
+    g.drawImage(cs,(int)((cx*16)-xscr)+1,(int)((cy*16)-yscr),null);
+
+  }
 }
