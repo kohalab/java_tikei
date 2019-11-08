@@ -81,11 +81,11 @@ public class java_tikei extends Canvas implements KeyListener {
         }
     }
 
-    static long rands = 1;
+    static long rands = 0x1357246;
 
-    static double getrandom(){
+    static long getrandom(){
       rands = noise.rand(rands);
-      return (double) (rands&0xffffffffL)/0xffffffffL;
+      return rands;
     }
 
     static int[][] copy(int[][] in){
@@ -145,8 +145,12 @@ public class java_tikei extends Canvas implements KeyListener {
     static Font font_w5;
     static Font font_w6;
 
-    static int[][] map_old = new int[w*16][h*8];
-    static int[][] map = new int[w*16][h*8];
+    static int wide_width = 24;
+    static int wide_height = 12;
+
+    static int[][] map_old = new int[w*wide_width][h*wide_height];
+    static int[][] map = new int[w*wide_width][h*wide_height];
+    static int[][] map_bright = new int[w*wide_width][h*wide_height];
 
     static ent player;
 
@@ -213,6 +217,20 @@ public class java_tikei extends Canvas implements KeyListener {
         double p = (double)y/(map[0].length-1) *100d;
         System.out.println("生成中 "+String.format("%3.0f", p));
       }
+
+      for(int y = map[0].length-1;y >= 0;y--){
+          for(int x = 0;x < map.length;x++){
+            //
+          if(y > 0){
+            if(map[x][y] == 1){
+              if(map[x][y-1] != 0){
+                map[x][y] = 2;
+              }
+            }
+          }
+        }
+      }
+
       out:
       for(int y = 0;y < map[0].length;y++){
         if(map[0][y] != 0){
@@ -225,29 +243,65 @@ public class java_tikei extends Canvas implements KeyListener {
 
     public void paint(Graphics g) {
       //xscr = (frameCount/2d);
-      kusa:
+      fcoldnano = System.nanoTime();
+
+      int[][] map_tmp = new int[map.length][map[0].length];
+      for(int x = 0;x < map.length;x++){
+        for(int y = 0;y < map[0].length;y++){
+          map_tmp[x][y] = map[x][y];
+        }
+      }
+      int pc = frameCount%128;
       for(int y = map[0].length-1;y >= 0;y--){
-          for(int x = 0;x < map.length;x++){
+          for(int x = (map.length/128)*pc;x < (map.length/128)*(pc+1);x++){
             //
               if(y > 0){
-                if(map[x][y] == 1){
-                  if(map[x][y-1] != 0){
+                if(map_tmp[x][y] == 1){
+                  if(map_tmp[x][y-1] != 0){
 
-                    if(getrandom() < 0.05){
+                    if((getrandom()&0xffffl) < 16000){
                     map[x][y] = 2;
                     }
 
                   }
                 }
               }
+              //
+              for(int Y = -1;Y < 2;Y++){
+                //
+                if(x > 0 && y > 3 && y < map[0].length-3){
+                  if(map_tmp[x][y] == 2){
+                    if(map_tmp[x-1][y+Y] == 1 && map[x][y-1] == 0){
+
+                      if((getrandom()&0xffffl) < 16000){
+                      map[x][y] = 1;
+                      }
+
+                    }
+                  }
+                }
+                if(x < map.length-1 && y > 3 && y < map[0].length-3){
+                  if(map_tmp[x][y] == 2){
+                    if(map_tmp[x+1][y+Y] == 1 && map[x][y-1] == 0){
+
+                      if((getrandom()&0xffffl) < 16000){
+                      map[x][y] = 1;
+                      }
+
+                    }
+                  }
+                }
+                //
+              }
+              //
             //
         }
       }
 
-      fcoldnano = System.nanoTime();
-      //
-      //
 
+      //
+      //
+      int drawchange = 0;
       for(int y = 0;y < map[0].length;y++){
           for(int x = 0;x < map.length;x++){
             //
@@ -257,6 +311,7 @@ public class java_tikei extends Canvas implements KeyListener {
                 BufferedImage n = data[ map[x][y] ];
                 if(n != null){
                   bgg.g.drawImage(n,x*16,y*16,null);
+                  drawchange++;
                 }
               }
               //
@@ -274,6 +329,10 @@ public class java_tikei extends Canvas implements KeyListener {
 
       player.proc(map);
       player.draw(g,plei,item,cs,xscr,yscr);
+      if(xscr > (map.length-w)-16)xscr = (map.length-w)-16;
+      if(yscr > (map[0].length-h)-16)yscr = (map[0].length-h)-16;
+      if(xscr < 0)xscr = 0;
+      if(yscr < 0)yscr = 0;
 
       sagasi();
 
@@ -287,6 +346,8 @@ public class java_tikei extends Canvas implements KeyListener {
       font_w3 = font_w3.deriveFont(12.0f);
       g.setFont(font_w3);
       g.setColor(new Color(0));
+
+      g.drawString("ブロック変更描画:"+drawchange , 5 , 12+(12*0));
       /*
       g.drawString("x:"+px , 5 , 12+(12*0));
       g.drawString("y:"+py , 5 , 12+(12*1));
@@ -324,7 +385,7 @@ public class java_tikei extends Canvas implements KeyListener {
 
   void sagasi(){
     int bk = map.length*map[0].length;
-    int gx = map.length*16/2;
+    int gx = kpx;
     int gy = 0;
     for(int y = 0;y < map[0].length;y++){
         for(int x = 0;x < map.length;x++){
@@ -379,10 +440,6 @@ public class java_tikei extends Canvas implements KeyListener {
       keyCode = event.getKeyCode();
       keys[key] = true;
       keyCodes[keyCode] = true;
-      if(keyCode == LEFT )player.csx--;
-      if(keyCode == RIGHT)player.csx++;
-      if(keyCode == UP   )player.csy--;
-      if(keyCode == DOWN )player.csy++;
     }
     public void keyReleased(KeyEvent event) {
       keyPressed = false;
@@ -424,20 +481,13 @@ class Noise {
 
   public long rand(long x) {
       x ^= x << 21;
-      x ^= x >>> 35;
+      x ^= x >> 35;
       x ^= x << 4;
 
       x ^= x << 21;
-      x ^= x >>> 35;
+      x ^= x >> 35;
       x ^= x << 4;
 
-      x ^= x << 21;
-      x ^= x >>> 35;
-      x ^= x << 4;
-
-      x ^= x << 21;
-      x ^= x >>> 35;
-      x ^= x << 4;
     return x;
   }
   public long rand(long x,long y,long z) {
@@ -483,9 +533,9 @@ class Noise {
     z += 15;
     double all = 0;
     double wari = 0;
-    for(int i = 0;i < 8;i++){
+    for(int i = 0;i < 15;i++){
       int s = i+1;
-      all += ((noise(x*s,y*s,z*s)-0.5)*2)/(s*7);
+      all += ((noise(x*s,y*s,z*s)-0.5)*2)/(s*15);
       wari += (double)1/s;
     }
     all /= wari;
@@ -558,8 +608,8 @@ class ent{
     if(csy < -2)csy = -2;
     if(csy > +2)csy = +2;
 
-    cx = (int)(px/16)+csx;
-    cy = (int)(py/16)-1+csy;
+    cx = (int)Math.round((px/16d)-0.5)+csx;
+    cy = (int)Math.round((py/16d)-0.5)-1+csy;
     if(cx < 0)cx = 0;
     if(cy < 0)cy = 0;
     if(cx > map.length-1)cx = map.length-1;
@@ -580,25 +630,33 @@ class ent{
           int W = 16;
           int H = 16;
           if(map[x][y] != 0 && map[x][y] < 128){
-            if( col(X,Y,W,H,(int)px,(int)py) ){
-              pys = 0;
-              py = y*16;
-              tnaswtktirk = true;
+            //aaaaa
+            boolean umore = false;
+            if( col(X,Y,W,H,(int)px,(int)py-12) ){
+              umore = true;
             }
-            if( col(X,Y,W,H,(int)px,(int)py-20) || col(X,Y,W,H,(int)px,(int)py-14) ){
-              pys = 1;
-              py = (y*16)+24+8+4;
-            }else{
-              if( col(X,Y,W,H,(int)px-8,(int)py-8) || col(X,Y,W,H,(int)px-8,(int)py-18) ){
-                //pys = -0.1;
-                px = (x+1)*16+8;
+            if(!umore){
+              if( col(X,Y,W,H,(int)px,(int)py) ){
+                pys = 0;
+                py = y*16;
+                tnaswtktirk = true;
               }
-              if( col(X,Y,W,H,(int)px+8,(int)py-8) || col(X,Y,W,H,(int)px+8,(int)py-18) ){
-                //pys = -0.1;
-                px = x*16-8;
+              if( col(X,Y,W,H,(int)px,(int)py-20) || col(X,Y,W,H,(int)px,(int)py-14) ){
+                pys = 1;
+                py = (y*16)+24+8+4;
+              }else{
+                if( col(X,Y,W,H,(int)px-8,(int)py-8) || col(X,Y,W,H,(int)px-8,(int)py-18) ){
+                  //pys = -0.1;
+                  px = (x+1)*16+8;
+                }
+                if( col(X,Y,W,H,(int)px+8,(int)py-8) || col(X,Y,W,H,(int)px+8,(int)py-18) ){
+                  //pys = -0.1;
+                  px = x*16-8;
+                }
               }
             }
             //
+            ///aaaaa
           }
         //
       }
@@ -616,6 +674,23 @@ class ent{
       if(java_tikei.keys['w']){
         pys = -4;
       }
+    }
+
+    if(java_tikei.keyCodes[java_tikei.LEFT]){
+      csx = -1;
+      csy = +0;
+    }
+    if(java_tikei.keyCodes[java_tikei.RIGHT]){
+      csx = +1;
+      csy = +0;
+    }
+    if(java_tikei.keyCodes[java_tikei.UP]){
+      csx = +0;
+      csy = -1;
+    }
+    if(java_tikei.keyCodes[java_tikei.DOWN]){
+      csx = +0;
+      csy = +1;
     }
     if(pys > 4)pys = 4;
     pxs /= 1.6;
