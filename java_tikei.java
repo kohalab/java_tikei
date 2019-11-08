@@ -281,7 +281,6 @@ public class java_tikei extends Canvas implements KeyListener {
             //
            if(map[x][y] == 1){
              if( (getrandom()&0xff) < 6){
-               map[x][y-2] = 16;
                map[x][y-1] = 16;
                map[x+1][y-1] = 16;
                map[x-1][y-1] = 16;
