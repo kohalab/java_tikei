@@ -70,8 +70,8 @@ public class java_tikei extends Canvas implements KeyListener {
             osoldnano =  System.nanoTime()-osoldnano;
             frameRate = 1d/(osoldnano/1000d/1000d/1000d);
             double syori = (mf/1000d/1000d);
-            System.out.println("frameRate:"+ String.format("%.3f", frameRate) );
-            System.out.println("処理時間  :"+	String.format("%.3f", syori)+"ms");
+            //System.out.println("frameRate:"+ String.format("%3.3f", frameRate) );
+            //System.out.println("処理時間  :"+	String.format("%3.3f", syori)+"ms");
             canvas.repaint();
             oldnano = System.nanoTime();
             osoldnano = System.nanoTime();
@@ -155,6 +155,9 @@ public class java_tikei extends Canvas implements KeyListener {
     static boolean[] col = new boolean[256];
     static boolean[] mizu = new boolean[256];
 
+    static long freeold;
+    static long frold;
+
     static ent player;
 
     public static void setup(){
@@ -173,6 +176,7 @@ public class java_tikei extends Canvas implements KeyListener {
       data[16] = loadBufferedImage("tex/suimen.png");
       data[17] = loadBufferedImage("tex/mizu.png");
       data[18] = loadBufferedImage("tex/hmizu.png");
+      data[19] = loadBufferedImage("tex/mizu.png");
 
       data[128] = loadBufferedImage("tex/sirusi.png");
 
@@ -204,10 +208,12 @@ public class java_tikei extends Canvas implements KeyListener {
       col[16] = false;
       col[17] = false;
       col[18] = false;
+      col[19] = false;
 
       mizu[16] = true;
       mizu[17] = true;
       mizu[18] = true;
+      mizu[19] = true;
 
 
       yscr = map[0].length/2;
@@ -228,7 +234,7 @@ public class java_tikei extends Canvas implements KeyListener {
 
             if(noise.pnoise(X/60d,Y/30d,0) < k ){
               map[x][y] = 1;
-              if(noise.pnoise(X/60d,Y/30d,135) < (k*2)-0.52 ){
+              if(noise.pnoise(X/60d,Y/30d,135) < (k*2)-0.58 ){
                 map[x][y] = 3;
               }
             }
@@ -260,19 +266,40 @@ public class java_tikei extends Canvas implements KeyListener {
 
         }
       }
-
+      player.px = map.length*16/2;
       out:
       for(int y = 0;y < map[0].length;y++){
-        if(map[0][y] != 0){
-          player.px = map.length*16/2;
+        if(map[(int)(player.px/16)][y] != 0){
           player.py = y*16;
           break out;
+        }
+      }
+
+      for(int x = 2;x < map.length-2;x++){
+        aout:
+        for(int y = 2;y < map[0].length-2;y++){
+            //
+           if(map[x][y] == 1){
+             if( (getrandom()&0xff) < 6){
+               map[x][y-2] = 16;
+               map[x][y-1] = 16;
+               map[x+1][y-1] = 16;
+               map[x-1][y-1] = 16;
+             }
+             break aout;
+           }
+           //
         }
       }
 
     }
 
     public void paint(Graphics g) {
+
+      freeold = System.nanoTime()-freeold;
+      System.out.println("frameRate:"+	String.format("%010.4f", (1d/((frold+freeold)/1000d/1000d/1000d)))+"fps");
+      frold = System.nanoTime();
+      System.out.println("free     :"+	String.format("%010.4f", (freeold/1000d/1000d))+"ms");
       //xscr = (frameCount/2d);
       fcoldnano = System.nanoTime();
 
@@ -283,6 +310,8 @@ public class java_tikei extends Canvas implements KeyListener {
         }
       }
       int pc = frameCount%256;
+      int MF = (1000*1000*1000/25);
+      kusab:
       for(int y = map[0].length-1;y >= 0;y--){
           for(int x = (map.length/256)*pc;x < (map.length/256)*(pc+1);x++){
             //
@@ -330,35 +359,39 @@ public class java_tikei extends Canvas implements KeyListener {
       }
 
       pc = frameCount%16;
+      mizub:
       for(int y = map[0].length-1;y >= 0;y--){
           for(int x = (map.length/16)*pc;x < (map.length/16)*(pc+1);x++){
 
               if(x > 0 && y > 0 && x < map.length-1 && y < map[0].length-3){
                 //
-                if(map_tmp[x][y] == 16 || map_tmp[x][y] == 17 || map_tmp[x][y] == 18){
+                if(map_tmp[x][y] == 16 || map_tmp[x][y] == 17 || map_tmp[x][y] == 18 || map_tmp[x][y] == 19){
                   if(map_tmp[x][y+1] == 0){
-                    map[x][y+1] = 17;
+                    map[x][y+1] = 19;
                   }
                 }
 
 
-                if(map_tmp[x][y] == 16 || map_tmp[x][y] == 17){
+                if(map_tmp[x][y] == 16 || map_tmp[x][y] == 17 || map_tmp[x][y] == 19){
                   //
-                  int b = 16;
-                  if(map_tmp[x][y-1] == 0)b = 18;
-                  if(map_tmp[x-1][y] == 0){
-                    map[x-1][y] = b;
-                  }
-                  if(map_tmp[x+1][y] == 0){
-                    map[x+1][y] = b;
+                  if(map_tmp[x][y] != 19 || (map_tmp[x][y+1] != 0 && !mizu[map_tmp[x][y+1]] )){
+                    int b = 16;
+                    if(map_tmp[x][y-1] == 0)b = 18;
+                    if(map_tmp[x-1][y] == 0){
+                      map[x-1][y] = b;
+                    }
+                    if(map_tmp[x+1][y] == 0){
+                      map[x+1][y] = b;
+                    }
                   }
                 }
                 //
               }
               //
-
+              if(System.nanoTime()-fcoldnano >= MF)break mizub;
         }
       }
+      mikeb:
       for(int y = map[0].length-1;y >= 0;y--){
           for(int x = (map.length/16)*pc;x < (map.length/16)*(pc+1);x++){
 
@@ -372,22 +405,29 @@ public class java_tikei extends Canvas implements KeyListener {
                   //
                 }
                 //
-                if(map[x][y] == 17 || map[x][y] == 18){
+                if(map[x][y] == 17 || map[x][y] == 18 || map[x][y] == 19){
                   //
                   boolean a = false;
-                  if(map_tmp[x-1][y] == 16 || map_tmp[x-1][y] == 17 || map_tmp[x-1][y] == 18){
-                    a = true;
-                  }
-                  if(map_tmp[x-1][y] == 16 || map_tmp[x+1][y] == 17 || map_tmp[x+1][y] == 18){
-                    a = true;
+
+                  for(int I = -1;I < 2;I++){
+                    for(int F = -1;F < 2;F++){
+                      //
+                      if(I != 0 && F != 0){
+                        //
+                        if(
+                        map_tmp[x+I][y+F] == 16 ||
+                        map_tmp[x+I][y+F] == 17 ||
+                        map_tmp[x+I][y+F] == 18 ||
+                        map_tmp[x+I][y+F] == 19
+                        ){
+                          a = true;
+                        }
+                        //
+                      }
+                      //
+                    }
                   }
 
-                  if(map_tmp[x][y-1] == 16 || map_tmp[x][y-1] == 17 || map_tmp[x][y-1] == 18){
-                    a = true;
-                  }
-                  if(map_tmp[x][y+1] == 16 || map_tmp[x][y+1] == 17 || map_tmp[x][y+1] == 18){
-                    a = true;
-                  }
                   if(a == false){
                     map[x][y] = 0;
                   }
@@ -396,6 +436,7 @@ public class java_tikei extends Canvas implements KeyListener {
                 //
               }
               //
+              if(System.nanoTime()-fcoldnano >= MF)break mikeb;
         }
       }
 
@@ -408,7 +449,7 @@ public class java_tikei extends Canvas implements KeyListener {
       for(int y = 0;y < map[0].length;y++){
           for(int x = 0;x < map.length;x++){
             //
-            if(( map[x][y] != map_old[x][y] )){
+            if(( map[x][y] != map_old[x][y] ) ){
               //
               if(true){
                 BufferedImage n = data[ map[x][y] ];
@@ -418,7 +459,7 @@ public class java_tikei extends Canvas implements KeyListener {
                   drawchange++;
                   map_old[x][y] = map[x][y];
                   //
-                  if(System.nanoTime()-fcoldnano >= (1000*1000*1000/15))break drb;
+                  if(System.nanoTime()-fcoldnano >= MF)break drb;
                   //
                 }
               }
@@ -464,7 +505,7 @@ public class java_tikei extends Canvas implements KeyListener {
       g.setColor(new Color(0));
 
       g.drawString("ブロック変更描画:"+drawchange , 5 , 12+(12*0));
-      g.drawString("未描画ブロック :"+tododraw , 5 , 12+(12*1));
+      g.drawString("未描画ブロック　:"+tododraw , 5 , 12+(12*1));
       /*
       g.drawString("x:"+px , 5 , 12+(12*0));
       g.drawString("y:"+py , 5 , 12+(12*1));
@@ -492,6 +533,8 @@ public class java_tikei extends Canvas implements KeyListener {
     xscr += xscrs;
     yscr += yscrs;
     mf = System.nanoTime()-fcoldnano;
+    freeold = System.nanoTime();
+    frold = System.nanoTime()-frold;
   }
 
   static int kpx,kpy;
@@ -502,8 +545,8 @@ public class java_tikei extends Canvas implements KeyListener {
 
   void sagasi(){
     int bk = map.length*map[0].length;
-    int gx = kpx;
-    int gy = 0;
+    int gx = ((int)player.px);
+    int gy = ((int)player.py)-height-32;
     for(int y = 0;y < map[0].length;y++){
         for(int x = 0;x < map.length;x++){
           //
@@ -524,13 +567,13 @@ public class java_tikei extends Canvas implements KeyListener {
         }
       }
       //
-      if(gx < kpx)kpx -= 16;
+      if(gx < kpx)kpx -= 8;
       else
-      if(gy < kpy)kpy -= 16;
+      if(gy < kpy)kpy -= 8;
       else
-      if(gx > kpx)kpx += 16;
+      if(gx > kpx)kpx += 8;
       else
-      if(gy > kpy)kpy += 16;
+      if(gy > kpy)kpy += 8;
       //
       if((kpx/16) < 0 )kpx = 0;
       if((kpy/16) < 0 )kpy = 0;
@@ -557,6 +600,7 @@ public class java_tikei extends Canvas implements KeyListener {
       keyCode = event.getKeyCode();
       keys[key] = true;
       keyCodes[keyCode] = true;
+      if(key == ESC)System.exit(0);
     }
     public void keyReleased(KeyEvent event) {
       keyPressed = false;
@@ -594,27 +638,39 @@ public class java_tikei extends Canvas implements KeyListener {
 }
 
 class Noise {
-  public static long seed = 123176;
+  public static long seed = 73824176427L;
 
-  public long rand(long x) {
+  static double[] i2d = new double[256*256];
+
+  Noise(){
+    for(int i = 0;i < i2d.length;i++){
+      i2d[i] = (double)i/(i2d.length-1);
+    }
+  }
+
+  public long RAND(long x) {
+      x *= 723;
       x ^= x << 21;
-      x ^= x >> 35;
+      x ^= x >>> 35;
       x ^= x << 4;
 
       x ^= x << 21;
-      x ^= x >> 35;
+      x ^= x >>> 35;
       x ^= x << 4;
 
     return x;
+  }
+  public long rand(long x) {
+    return RAND(RAND(seed)+x);
   }
   public long rand(long x,long y,long z) {
     return rand(rand(rand(rand(x+seed))+y)+z);
   }
   public double frand(long x){
-    return (rand(x)&0xffff)/65535d;
+    return i2d[(int)rand(x)&0xffff];
   }
   public double frand(long x,long y,long z){
-    return (rand(x,y,z)&0xffff)/65535d;
+    return i2d[(int)rand(x,y,z)&0xffff];
   }
   public double aida(double a,double b,double t){
     return a + ((b-a)*t);
@@ -709,7 +765,7 @@ class ent{
       return n;
   }
 
-  static double px,py,pxs,pys;
+  static double px,py,pxs,pys,pwk;
   static int cx,cy,csx,csy;
   static int plr;
 
@@ -719,6 +775,8 @@ class ent{
 
     px += pxs;
     py += pys;
+    pwk += pxs > 0?pxs:-pxs/8;
+    pwk = (pwk+4)%4;
 
     if(csx < -2)csx = -2;
     if(csx > +2)csx = +2;
@@ -726,7 +784,7 @@ class ent{
     if(csy > +2)csy = +2;
 
     cx = (int)Math.round((px/16d)-0.5)+csx;
-    cy = (int)Math.round((py/16d)-0.5)-1+csy;
+    cy = (int)(py/16d)-1+csy;
     if(cx < 0)cx = 0;
     if(cy < 0)cy = 0;
     if(cx > map.length-1)cx = map.length-1;
@@ -748,7 +806,7 @@ class ent{
           int W = 16;
           int H = 16;
           if(java_tikei.mizu[map[x][y]]){
-            if( col(X,Y,W,H,(int)px,(int)py) ){
+            if( col(X,Y,W,H,(int)px,(int)py-12) ){
               suityu = true;
             }
           }
@@ -795,13 +853,19 @@ class ent{
     }
     if(tnaswtktirk){
       if(java_tikei.keys['w']){
-        pys = -4;
+        pys = -6;
       }
     }
     if(suityu){
       if(java_tikei.keys['w']){
-        pys -= 0.5;
+        pys -= 0.1;
+        py -= 1;
       }
+      if(java_tikei.keys['s']){
+        pys += 0.1;
+        py += 1;
+      }
+      pys -= 0.38;
     }
 
     int scx = csx;
@@ -836,6 +900,12 @@ class ent{
   }
   public void draw(Graphics g,BufferedImage[] player,BufferedImage[] item,BufferedImage cs,double xscr,double yscr){
     int playern = 0;
+
+    if((int)pwk == 0)playern = 0;
+    if((int)pwk == 1)playern = 3;
+    if((int)pwk == 2)playern = 0;
+    if((int)pwk == 3)playern = 4;
+
 
     g.drawImage(cs,(int)((cx*16)-xscr)+1,(int)((cy*16)-yscr),null);
 
